@@ -1,7 +1,3 @@
-using Condense
-using Test
-using MLJ
-using Distributions
 
 @testset "oracle_density.jl" begin
     g0(X) = Normal.(X, 0.1)
