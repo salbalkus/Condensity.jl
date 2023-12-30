@@ -1,32 +1,68 @@
-"""
-    OracleDensity <: ConDensityEstimator
 
-A mutable structure representing an oracle density estimator.
+
 """
-mutable struct OracleDensity <: ConDensityEstimator
-    density::Function
+    struct OracleDensityEstimator <: Unsupervised
+
+A struct representing an Oracle Density Estimator model.
+
+# Fields
+- `dgp::DataGeneratingProcess`: The data generating process used by the estimator.
+
+"""
+struct OracleDensityEstimator <: Unsupervised
+    dgp::DataGeneratingProcess
 end
 
 """
-    MMI.fit(model::OracleDensity, verbosity::Int, X, y)
+    MMI.fit!(model::OracleDensityEstimator, verbosity, X, y)
 
-Fit the model to the data. Returns the fit result, cache, and report.
+Fit the OracleDensityEstimator model to the given data.
+
+# Arguments
+- `model::OracleDensityEstimator`: The OracleDensityEstimator model to fit.
+- `verbosity`: The verbosity level of the fitting process.
+- `X`: The input data Table.
+- `y`: The target data Table.
+
+# Returns
+- `fitresult`: A `NamedTuple` containing the fit result.
+- `cache`: The cache object.
+- `report`: The report object.
+
 """
-function MMI.fit(model::OracleDensity, verbosity::Int, X, y)
-    fitresult = (; treatment_names = propertynames(y),)
+function MMI.fit!(model::OracleDensityEstimator, verbosity, X, y)
+    fitresult = (; targetnames = columnnames(y),)
     cache = nothing
     report = nothing
     return fitresult, cache, report
 end
 
 """
-    MMI.predict(model::OracleDensity, fitresult, Xnew)
+    MMI.transform(model::OracleDensityEstimator, verbosity, X)
 
-Predict the propensity from the oracle assigned to the fitted treatment label.
+Transform the input data using the OracleDensityEstimator model.
+
+# Arguments
+- `model::OracleDensityEstimator`: The OracleDensityEstimator model to use for transformation.
+- `verbosity`: The verbosity level of the transformation process.
+- `X`: The input data table.
+
+# Returns
+- `density`: A `Vector` of transformed density values.
+
 """
-function MMI.predict(model::OracleDensity, fitresult, Xnew)
-    y = MMI.matrix(Xnew[fitresult.treatment_names])
-    X = MMI.matrix(Xnew[InvertedIndices.Not(fitresult.treatment_names)])
+function MMI.transform(model::OracleDensityEstimator, verbosity, X)
+    
+    # initialize the density
+    density = ones(nrow(X))
 
-    return Distributions.pdf.(model.density(X), y)
+    # Iterate through each target column and multiply by its density,
+    # conditional on all other variables and subsequent targets
+    for (i, targetname) in enumerate(fitresult.targetnames)
+        Xsub = select(X, Not(targetnames[1:i]))
+        density = @. density * pdf(condensity(model.dgp, Xsub, targetname))
+    end
+
+    return density
 end
+

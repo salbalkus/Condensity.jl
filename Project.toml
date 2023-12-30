@@ -1,4 +1,4 @@
-name = "Condense"
+name = "Condensity"
 uuid = "4a3ed1f2-33f5-4d2a-92e9-d08cf3575152"
 authors = ["Salvador Balkus"]
 version = "1.0.0-DEV"
@@ -6,8 +6,10 @@ version = "1.0.0-DEV"
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+GaussianProcesses = "891a1506-143c-57d2-908e-e1f8e92e6de9"
 InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 MLJModelInterface = "e80e1ace-859a-464e-9ed9-23947d8ae3ea"
+QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 
 [compat]
 julia = "1"

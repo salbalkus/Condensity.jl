@@ -1,8 +1,9 @@
-using Condense
+using .Condensity
 using Test
 using MLJ
 using Distributions
 
-@testset "Condense.jl" begin
+
+@testset "Condensity.jl" begin
     @test include("oracle.jl")
 end

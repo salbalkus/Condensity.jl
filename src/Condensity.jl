@@ -1,10 +1,10 @@
-module Condense
+module Condensity
 
 import MLJModelInterface
 import Distributions
-import InvertedIndices
+import InvertedIndices 
 
-const PKG = "Condense"          # substitute model-providing package name
+const PKG = "Condensity"          # substitute model-providing package name
 const MMI = MLJModelInterface
 
 # Define abstract data types
@@ -13,6 +13,8 @@ abstract type ConDensityRatioEstimator <: MMI.Supervised end
 
 ### Includes ###
 include("density/oracle.jl")
+include("density/location_scale.jl")
+
 
 ### Exports ###
 
