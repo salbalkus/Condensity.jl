@@ -9,7 +9,7 @@ A struct representing an Oracle Density Estimator model.
 - `dgp::DataGeneratingProcess`: The data generating process used by the estimator.
 
 """
-struct OracleDensityEstimator <: Unsupervised
+struct OracleDensityEstimator <: DensityEstimator
     dgp::DataGeneratingProcess
 end
 
@@ -30,37 +30,38 @@ Fit the OracleDensityEstimator model to the given data.
 - `report`: The report object.
 
 """
-function MMI.fit!(model::OracleDensityEstimator, verbosity, X, y)
-    fitresult = (; targetnames = columnnames(y),)
+function MMI.fit(model::OracleDensityEstimator, verbosity, X, y)
+    fitresult = (; targetnames = Tables.columnnames(y),)
     cache = nothing
     report = nothing
     return fitresult, cache, report
 end
 
 """
-    MMI.transform(model::OracleDensityEstimator, verbosity, X)
+    MMI.predict(model::OracleDensityEstimator, verbosity, X)
 
-Transform the input data using the OracleDensityEstimator model.
+Predict the density using the OracleDensityEstimator model.
 
 # Arguments
 - `model::OracleDensityEstimator`: The OracleDensityEstimator model to use for transformation.
-- `verbosity`: The verbosity level of the transformation process.
+- `verbosity`: The verbosity level.
 - `X`: The input data table.
 
 # Returns
-- `density`: A `Vector` of transformed density values.
+- `density`: A `Vector` of density values.
 
 """
-function MMI.transform(model::OracleDensityEstimator, verbosity, X)
+function MMI.predict(model::OracleDensityEstimator, fitresult, X)
     
     # initialize the density
-    density = ones(nrow(X))
+    density = ones(DataAPI.nrow(X))
 
     # Iterate through each target column and multiply by its density,
     # conditional on all other variables and subsequent targets
     for (i, targetname) in enumerate(fitresult.targetnames)
-        Xsub = select(X, Not(targetnames[1:i]))
-        density = @. density * pdf(condensity(model.dgp, Xsub, targetname))
+        Xsub = CausalTable(reject(X, fitresult.targetnames[1:i]) |> Tables.columntable)
+        y = Tables.getcolumn(X, targetname)
+        density = density .* pdf.(condensity(model.dgp, Xsub, targetname), y)
     end
 
     return density

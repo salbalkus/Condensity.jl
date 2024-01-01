@@ -1,101 +1,84 @@
-### Density ###
+"""
+    struct LocationScaleDensity <: ConDensityEstimator
 
-using MLJ
-using MLJBase
-using Distributions
-using KernelDensity
+The `LocationScaleDensity` struct represents a conditional density estimator that models the conditional distribution of a target variable given a set of features. It combines a location model, a scale model, and a density model to estimate the conditional density.
 
-mutable struct KDE <: MLJBase.Deterministic
-    bandwidth::Float64
-    kernel
+## Fields
+- `location_model::MMI.Supervised`: The location model used to estimate the conditional mean.
+- `scale_model::MMI.Supervised`: The scale model used to estimate the conditional variance.
+- `density_model::DensityEstimator`: The density model used to estimate the conditional density.
+- `r_density`: An MLJ range object over which `density_model` will be tuned.
+- `resampling::MT.ResamplingStrategy`: The resampling strategy used during model fitting.
+
+"""
+
+struct LocationScaleDensity <: ConDensityEstimator
+    location_model::MMI.Supervised
+    scale_model::MMI.Supervised
+    density_model::DensityEstimator
+    r_density
+    resampling::MT.ResamplingStrategy
 end
 
-function MLJBase.fit(model::KDE, verbosity, X, y)
-
-    ρ_fit = KernelDensity.InterpKDE(KernelDensity.kde(X; bandwidth = model.bandwidth, kernel = model.kernel))
-
-    fitresult = (ρ_fit = ρ_fit,)
-    cache = nothing
-    report = nothing
-    return fitresult, cache, report
-end
-
-MLJBase.fit(model::KDE, verbosity, X) = MLJBase.fit(model::KDE, verbosity, X, nothing)
-MLJBase.predict(model::KDE, fitresult, X) = pdf(fitresult.ρ_fit, X)
-
-
-### Conditional Density ###
-
-struct LocationScaleDensity <: MLJBase.Deterministic
-    location_model::MLJ.Supervised
-    scale_model::MLJ.Supervised
-    r
-    resampling::MLJBase.ResamplingStrategy
-end
-
-# Implement the necessary methods
-function MLJBase.fit(model::LocationScaleDensity, X, y)
+function MMI.fit(model::LocationScaleDensity, verbosity, X, y)
     
-    yvec = getcolumn(y, 1)
+    yvec = Tables.getcolumn(y, 1) # convert Table to Vector
+
+    # Fit the location model
     location_mach = machine(model.location_model, X, yvec) |> fit!
-    μ = MLJBase.predict_mean(location_mach, X)
+    μ = MMI.predict_mean(location_mach, X)
+
+    # Fit the scale model
     ε = @. yvec - μ
     ε2 = @. ε^2
-    
     min_obs_ε2 = 2*minimum(ε2)
     scale_mach = machine(model.scale_model, X, ε2) |> fit!
 
-    σ2 = MLJBase.predict_mean(scale_mach, X)
+    # Fit the density model
+    σ2 = MMI.predict_mean(scale_mach, X)
     σ2[σ2 .< 0] .= min_obs_ε2
-
     ε = @. ε / sqrt(σ2)
 
-    density_model = TunedModel(
+    tuned_density_model = MT.TunedModel(
         # TODO: Pick better default bandwidth?
-        model = KDE(1.06 / length(ε)^(0.2), Epanechnikov), # optimal MISE with σ = 1
-        tuning = Grid(resolution = 10),
-        resampling = resampling,
+        model = model.density_model,
+        # TODO: Choose better MT.TuningStrategy
+        tuning = MT.Grid(resolution = 100),
+        resampling = model.resampling,
         measure = negmeanloglik,
-        operation = MLJBase.predict,
-        range = r
+        operation = MMI.predict,
+        range = model.r_density
         )
     
-    density_mach = machine(density_model, X, zeros(length(X))) |> fit!
+    density_mach = machine(tuned_density_model, (ε = ε,), zeros(length(ε))) |> fit!
 
-    fitresult = (location_mach = location_mach,  scale_mach = scale_mach, density_mach = density_mach, min_obs_ε2 = min_obs_ε2)
+    fitresult = (location_mach = location_mach,  
+                 scale_mach = scale_mach, 
+                 density_mach = density_mach, 
+                 min_obs_ε2 = min_obs_ε2, 
+                 target_name = Tables.columnnames(y)[1]
+                 )
     cache = nothing
-    report = nothing
+    report = (ε = ε,
+                )
     return fitresult, cache, report
 
 end
 
-function MLJBase.predict(model::LocationScaleDensity, fitresult, X)
-    μ = MLJBase.predict_mean(location_mach, X)
-    σ2 = MLJBase.predict_mean(scale_mach, X)
+function MMI.predict(model::LocationScaleDensity, fitresult, Xy)
+
+    # Split table into vectors
+    X = reject(Xy, fitresult.target_name) |> Tables.columntable
+    y = Tables.getcolumn(Xy, fitresult.target_name)
+
+    # Get residual model predictions
+    μ = MMI.predict_mean(fitresult.location_mach, X)
+    σ2 = MMI.predict_mean(fitresult.scale_mach, X)
     σ2[σ2 .< 0] .= fitresult.min_obs_ε2
     rootσ2 = @. sqrt(σ2)
 
+    # Return density of standardized residual 
     ε = @. (y - μ) / rootσ2
-    return MLJBase.predict(density_mach, ε) ./ rootσ2
+    return MLJBase.predict(fitresult.density_mach, (ε = ε,)) ./ rootσ2
 end
 
-# Implement Golden Section Search
-
-mutable struct GoldenSectionSearch <: TuningStrategy
-	goal::Union{Nothing,Int}
-	resolution::Int
-	rng::Random.AbstractRNG
-end
-
-# Constructor with keywords
-GoldenSectionSearch(; goal=nothing, resolution=10, shuffle=true,
-	 rng=Random.GLOBAL_RNG) =
-	Grid(goal, resolution, MLJBase.shuffle_and_rng(shuffle, rng)...)
-
-# Setup methods
-MLJTuning.setup(tuning::MyTuningStrategy, model, range::RangeType1, n, verbosity) = ...
-MLJTuning.setup(tuning::MyTuningStrategy, model, range::RangeType2, n, verbosity) = ...
-
-# Generate model batches to evaluate
-MLJTuning.models(tuning::MyTuningStrategy, model, history, state, n_remaining, verbosity)
-	-> vector_of_models, new_state
