@@ -22,9 +22,14 @@ abstract type ConDensityRatioEstimator <: MMI.Deterministic end
 
 ### Includes ###
 include("utilities.jl")
+
 include("density/oracle.jl")
 include("density/kde.jl")
 include("density/location_scale.jl")
+
+include("density_ratio/density_ratio_propensity.jl")
+include("density_ratio/probabilistic_classifier.jl")
+
 
 
 ### Exports ###
@@ -33,6 +38,8 @@ include("density/location_scale.jl")
 export negmeanloglik
 export meanloglik
 export reject
+export merge_tables
+export concat_tables
 
 # oracle_density.jl
 export OracleDensityEstimator
@@ -40,6 +47,12 @@ export OracleDensityEstimator
 # location_scale.jl
 export KDE
 export LocationScaleDensity
+
+# density_ratio_propensity.jl
+export DensityRatioPropensity
+
+# probabilistic_classifier.jl
+export DensityRatioClassifier
 
 # golden_section_search.jl
 

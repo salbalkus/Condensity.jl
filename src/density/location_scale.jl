@@ -20,16 +20,14 @@ struct LocationScaleDensity <: ConDensityEstimator
     resampling::MT.ResamplingStrategy
 end
 
-function MMI.fit(model::LocationScaleDensity, verbosity, X, y)
+function fit_factorized_density(model::LocationScaleDensity, verbosity, X, y)
     
-    yvec = Tables.getcolumn(y, 1) # convert Table to Vector
-
     # Fit the location model
-    location_mach = machine(model.location_model, X, yvec) |> fit!
+    location_mach = machine(model.location_model, X, y) |> fit!
     μ = MMI.predict_mean(location_mach, X)
 
     # Fit the scale model
-    ε = @. yvec - μ
+    ε = @. y - μ
     ε2 = @. ε^2
     min_obs_ε2 = 2*minimum(ε2)
     scale_mach = machine(model.scale_model, X, ε2) |> fit!
@@ -52,33 +50,62 @@ function MMI.fit(model::LocationScaleDensity, verbosity, X, y)
     
     density_mach = machine(tuned_density_model, (ε = ε,), zeros(length(ε))) |> fit!
 
-    fitresult = (location_mach = location_mach,  
-                 scale_mach = scale_mach, 
-                 density_mach = density_mach, 
-                 min_obs_ε2 = min_obs_ε2, 
-                 target_name = Tables.columnnames(y)[1]
-                 )
-    cache = nothing
-    report = (ε = ε,
-                )
-    return fitresult, cache, report
-
+    return location_mach, scale_mach, density_mach, min_obs_ε2
 end
 
-function MMI.predict(model::LocationScaleDensity, fitresult, Xy)
+function MMI.fit(model::LocationScaleDensity, verbosity, X, y)
+    
+    location_machs = Vector{Machine}(undef, DataAPI.ncol(y))
+    scale_machs = Vector{Machine}(undef, DataAPI.ncol(y))
+    density_machs = Vector{Machine}(undef, DataAPI.ncol(y))
+    min_obs_ε2s = Vector{Float64}(undef, DataAPI.ncol(y))
 
-    # Split table into vectors
-    X = reject(Xy, fitresult.target_name) |> Tables.columntable
-    y = Tables.getcolumn(Xy, fitresult.target_name)
+    Xy_cur = merge_tables(X, y)
+
+    for (i, target) in enumerate(Tables.columnnames(y))
+        y_cur = Tables.getcolumn(y, target)
+        Xy_cur = reject(Xy_cur, target) |> Tables.columntable
+        location_machs[i], scale_machs[i], density_machs[i], min_obs_ε2s[i] = fit_factorized_density(model, verbosity, Xy_cur, y_cur)
+    end
+    
+    fitresult = (location_machs = location_machs,  
+                 scale_machs = scale_machs, 
+                 density_machs = density_machs, 
+                 min_obs_ε2s = min_obs_ε2s, 
+                 target_names = Tables.columnnames(y)
+                 )
+    cache = nothing
+    report = nothing
+    return fitresult, cache, report
+end
+
+function predict_factorized_density(location_mach, scale_mach, density_mach, min_obs_ε2, X, y)
 
     # Get residual model predictions
-    μ = MMI.predict_mean(fitresult.location_mach, X)
-    σ2 = MMI.predict_mean(fitresult.scale_mach, X)
-    σ2[σ2 .< 0] .= fitresult.min_obs_ε2
+    μ = MMI.predict_mean(location_mach, X)
+    σ2 = MMI.predict_mean(scale_mach, X)
+    σ2[σ2 .< 0] .= min_obs_ε2
     rootσ2 = @. sqrt(σ2)
 
     # Return density of standardized residual 
     ε = @. (y - μ) / rootσ2
-    return MLJBase.predict(fitresult.density_mach, (ε = ε,)) ./ rootσ2
+    return MLJBase.predict(density_mach, (ε = ε,)) ./ rootσ2
+end
+
+function MMI.predict(model::LocationScaleDensity, fitresult, Xy) 
+
+    density = 1.0
+
+    for (i, target) in enumerate(fitresult.target_names)
+        y_cur = Tables.getcolumn(Xy, target)
+        Xy_cur = reject(Xy, fitresult.target_names[1:i]...) |> Tables.columntable
+        density = density .* predict_factorized_density(fitresult.location_machs[i], 
+                                              fitresult.scale_machs[i], 
+                                              fitresult.density_machs[i], 
+                                              fitresult.min_obs_ε2s[i], 
+                                              Xy_cur, y_cur)
+    end
+
+    return density
 end
 

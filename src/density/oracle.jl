@@ -9,7 +9,7 @@ A struct representing an Oracle Density Estimator model.
 - `dgp::DataGeneratingProcess`: The data generating process used by the estimator.
 
 """
-struct OracleDensityEstimator <: DensityEstimator
+struct OracleDensityEstimator <: ConDensityEstimator
     dgp::DataGeneratingProcess
 end
 

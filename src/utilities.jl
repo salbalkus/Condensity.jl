@@ -41,6 +41,57 @@ Remove specified columns from a table.
 A new table with the specified columns removed.
 
 """
-function reject(data, symb...)
-    return TableOperations.select(data, filter(∉(symb), Tables.columnnames(data))...)
+reject(data, symb...) = TableOperations.select(data, setdiff(Tables.columnnames(data), symb)...)
+
+"""
+    merge_tables(tables...)
+
+Merge multiple tables into a single table by column-wise concatenation.
+
+# Arguments
+- `tables`: The tables to be merged.
+
+# Returns
+A merged table.
+
+"""
+merge_tables(tables...) = merge(Tables.columntable.(tables)...)
+
+"""
+    concat_tables(tables...)
+
+Concatenates multiple tables into a single table by row.
+
+# Arguments
+- `tables`: The tables to be concatenated.
+
+# Returns
+A new table that is the row-wise concatenation of all input tables.
+"""
+concat_tables(tables...) = vcat(Tables.rowtable.(tables)...) |> Tables.columntable
+
+"""
+    bound(X::Vector; lower = -Inf, upper = Inf)
+
+Bound the elements of a vector `X` within the specified lower and upper limits.
+
+# Arguments
+- `X::Vector`: The input vector.
+- `lower::Real = -Inf`: The lower limit for the elements of `X`.
+- `upper::Real = Inf`: The upper limit for the elements of `X`.
+
+# Returns
+- `X::Vector`: The vector `X` with elements bounded within the specified limits.
+
+"""
+function bound(X::Vector; lower = -Inf, upper = Inf)
+    X = copy(X)
+    X[X .> upper] .= upper
+    X[X .< lower] .= lower
+    return X
+end
+
+function bound!(X::Vector; lower = -Inf, upper = Inf)
+    X[X .> upper] .= upper
+    X[X .< lower] .= lower
 end
