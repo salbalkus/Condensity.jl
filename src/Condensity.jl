@@ -2,9 +2,11 @@ module Condensity
 
 import MLJModelInterface
 import MLJTuning
-using MLJBase
 
-using Distributions
+import MLJBase: train_test_pairs, Machine, machine, fit!, predict, categorical
+import Distributions: convolve, pdf
+
+import StatsBase: mean
 using KernelDensity
 using Tables
 using TableOperations

@@ -30,7 +30,7 @@ function MMI.predict(model::DensityRatioClassifier, fitresult, Xy_nu, Xy_de)
     classifier_mach = machine(model.classifier, Xy, indicators)
 
     # Proceed with cross-fitting
-    tt_pairs = MLJBase.train_test_pairs(model.resampling, 1:DataAPI.nrow(Xy_nu))
+    tt_pairs = train_test_pairs(model.resampling, 1:DataAPI.nrow(Xy_nu))
 
     for (train, test) in tt_pairs
         # Make sure each resampled Xy_nu is matched up with its analogous Xy_de for fitting

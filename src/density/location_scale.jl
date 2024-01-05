@@ -89,7 +89,7 @@ function predict_factorized_density(location_mach, scale_mach, density_mach, min
 
     # Return density of standardized residual 
     ε = @. (y - μ) / rootσ2
-    return MLJBase.predict(density_mach, (ε = ε,)) ./ rootσ2
+    return MMI.predict(density_mach, (ε = ε,)) ./ rootσ2
 end
 
 function MMI.predict(model::LocationScaleDensity, fitresult, Xy) 

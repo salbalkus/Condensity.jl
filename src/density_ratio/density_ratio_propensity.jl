@@ -29,7 +29,3 @@ function MMI.predict(model::DensityRatioPropensity, fitresult, Xy_nu, Xy_de)
     #Hn = ifelse.(gn .> 0, gδinvn ./ gn, 0) .+ (gδn .== 0)
     return Hn
 end
-
-# TODO: Make these functions more general, able to take any argument
-#MLJBase.transform(mach::Machine, LA_nu::AbstractNode, LA_de::AbstractNode) = node((LA_nu, LA_de) -> MLJBase.transform(mach, LA_nu, LA_de), LA_nu, LA_de)
-#MLJBase.transform(mach::Machine, LA_nu::DataFrame, LA_de::DataFrame) = MLJBase.transform(mach.model, mach.fitresult, LA_nu, LA_de)
