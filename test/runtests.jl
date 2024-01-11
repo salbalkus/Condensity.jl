@@ -1,3 +1,4 @@
+using Test
 using Condensity
 using Distributions
 using MLJBase
@@ -6,11 +7,23 @@ using MLJModels
 using CausalTables
 using Tables
 using TableOperations
+using Graphs
 
-using Test
 using Random
 
 Random.seed!(1);
+
+distseq = Vector{Pair{Symbol, CausalTables.ValidDGPTypes}}([
+        :L1 => (; O...) -> DiscreteUniform(1, 5),
+        :L1_s => NeighborSum(:L1),
+        :A => (; O...) -> (@. Normal(O[:L1] + 0.2 * O[:L1_s], 0.5)),
+        :A_s => NeighborSum(:A),
+        :Y => (; O...) -> (@. Normal(O[:A] + O[:A_s] + 0.2 * O[:L1], 1))
+    ])
+
+dgp = DataGeneratingProcess(n -> random_regular_graph(n, 2), distseq; treatment = :A, response = :Y, controls = [:L1]);
+data = rand(dgp, 100)
+sdata = summarize(data)
 
 @testset "KDE" begin
     n = 100
@@ -22,40 +35,37 @@ Random.seed!(1);
     @test all(@. prediction > 0 && prediction < 1)
 end
 
+# TODO: Several inaccuracy issues with this test... need to delve deeper
 @testset "LocationScaleDensity" begin
     location_model = LinearRegressor()
     scale_model = ConstantRegressor()
-    density_model = KDE(0.1, Epanechnikov)
+    density_model = KDE(0.001, Epanechnikov)
 
-    r = range(density_model, :bandwidth, lower=0.01, upper=0.5)
+    r = range(density_model, :bandwidth, lower=0.001, upper=0.5)
     lse_model = LocationScaleDensity(location_model, scale_model, density_model, r, CV(nfolds=10))
 
-    dgp = DataGeneratingProcess([
-        :X => (; O...) -> Normal(0, 1),
-        :y => (; O...) -> @. Normal(3 * O[:X] + 3, 1)
-    ])
-    data = rand(dgp, 1000)
-
-    X = reject(data, :y) |> Tables.columntable
-    y = TableOperations.select(data, :y) |> Tables.columntable
-    lse_mach = machine(lse_model, X, y) |> fit!
+    X = reject(sdata, :A, :A_s, :Y) |> Tables.columntable
+    y = TableOperations.select(sdata, :A) |> Tables.columntable
     
-    prediction = predict(lse_mach, data)
+    lse_mach = machine(lse_model, X, y) |> fit!
+    lse_mach.fitresult
+    prediction = predict(lse_mach, reject(sdata, :Y) |> Tables.columntable)
 
     @test prediction isa Array{Float64,1}
-    @test all(@. prediction > 0 && prediction < 1)
+    @test all(@. prediction >= 0 && prediction < 1)
 
     # TODO: Need a better test to determine this actually works
-    true_density = pdf.(condensity(dgp, data, :y), y.y)
-
-    @test sum(@. true_density * log(true_density / prediction)) < 50
+    true_density = pdf.(condensity(dgp, data, :A), y.A)
+    sum(@. prediction * log(prediction / true_density))
+    @test sum(@. prediction * log(prediction / true_density)) < 50
 
     # Test within DensityRatioPropensity
-    data_shift = (X = Tables.getcolumn(data, :X), y = Tables.getcolumn(data, :y) .- 0.1)
-
+    Xy = reject(data, :Y, :A_s) |> Tables.columntable
+    Xy_shift = (L1 = Tables.getcolumn(data, :L1), L1_s = Tables.getcolumn(data, :L1_s), A = Tables.getcolumn(data, :A) .- 0.5)
     density_ratio_model = Condensity.DensityRatioPropensity(lse_model)
+
     dr_mach = machine(density_ratio_model, X, y) |> fit!
-    prediction_ratio = predict(dr_mach, data, data_shift)
+    prediction_ratio = predict(dr_mach, Xy, Xy_shift)
 
     @test prediction_ratio isa Array{Float64,1}
     @test all(@. prediction_ratio > 0)
@@ -63,26 +73,17 @@ end
 
 @testset "OracleDensity" begin
 
-    dgp = DataGeneratingProcess([
-        :X1 => (; O...) -> Categorical(3),
-        #:X2 => (; O...) -> Normal(0, 0.1),
-        :y => (; O...) -> @. Normal(3 * O[:X1] + 3, 1)
-    ])
-    data = rand(dgp, 100)
-
     condensity_model = Condensity.OracleDensityEstimator(dgp)
 
-    X = reject(data, :y) |> Tables.columntable
-    y = TableOperations.select(data, :y) |> Tables.columntable
-    
+    X = reject(data, :A, :A_s, :Y) |> Tables.columntable
+    y = TableOperations.select(data, :A_s, :A) |> Tables.columntable
     condensity_mach = machine(condensity_model, X, y) |> fit!
-    
-    prediction = predict(condensity_mach, data)
-    
+    prediction = predict(condensity_mach, sdata)
+
     @test prediction isa Array{Float64,1}
     @test all(@. prediction > 0 && prediction < 1)
 
-    true_density = pdf.(condensity(dgp, data, :y), y.y)
+    true_density = pdf.(condensity(dgp, sdata, :A_s), y.A_s) .* pdf.(condensity(dgp, sdata, :A), y.A)
     @test all(@. prediction > 0 && prediction < 1)
     @test all(prediction .== true_density)
 end

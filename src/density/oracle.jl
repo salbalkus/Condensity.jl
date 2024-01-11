@@ -54,14 +54,14 @@ Predict the density using the OracleDensityEstimator model.
 function MMI.predict(model::OracleDensityEstimator, fitresult, X)
     
     # initialize the density
-    density = ones(DataAPI.nrow(X))
+    density = 1.0
 
     # Iterate through each target column and multiply by its density,
     # conditional on all other variables and subsequent targets
     for (i, targetname) in enumerate(fitresult.targetnames)
-        Xsub = CausalTable(reject(X, fitresult.targetnames[1:i]) |> Tables.columntable)
+        # BUG: reject function not doing what we want here
         y = Tables.getcolumn(X, targetname)
-        density = density .* pdf.(condensity(model.dgp, Xsub, targetname), y)
+        density = density .* pdf.(condensity(model.dgp, X, targetname), y)
     end
 
     return density

@@ -60,11 +60,11 @@ function MMI.fit(model::LocationScaleDensity, verbosity, X, y)
     density_machs = Vector{Machine}(undef, DataAPI.ncol(y))
     min_obs_ε2s = Vector{Float64}(undef, DataAPI.ncol(y))
 
-    Xy_cur = merge_tables(X, y)
-
-    for (i, target) in enumerate(Tables.columnnames(y))
+    Xy = merge_tables(X, y)
+    target_names = Tables.columnnames(y)
+    for (i, target) in enumerate(target_names)
         y_cur = Tables.getcolumn(y, target)
-        Xy_cur = reject(Xy_cur, target) |> Tables.columntable
+        Xy_cur = reject(Xy, target_names[1:i]...) |> Tables.columntable
         location_machs[i], scale_machs[i], density_machs[i], min_obs_ε2s[i] = fit_factorized_density(model, verbosity, Xy_cur, y_cur)
     end
     
@@ -72,7 +72,7 @@ function MMI.fit(model::LocationScaleDensity, verbosity, X, y)
                  scale_machs = scale_machs, 
                  density_machs = density_machs, 
                  min_obs_ε2s = min_obs_ε2s, 
-                 target_names = Tables.columnnames(y)
+                 target_names = target_names
                  )
     cache = nothing
     report = nothing
@@ -84,7 +84,7 @@ function predict_factorized_density(location_mach, scale_mach, density_mach, min
     # Get residual model predictions
     μ = MMI.predict_mean(location_mach, X)
     σ2 = MMI.predict_mean(scale_mach, X)
-    σ2[σ2 .< 0] .= min_obs_ε2
+    σ2[σ2 .<= 0] .= min_obs_ε2
     rootσ2 = @. sqrt(σ2)
 
     # Return density of standardized residual 
