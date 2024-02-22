@@ -1,16 +1,3 @@
-"""
-    struct LocationScaleDensity <: ConDensityEstimator
-
-The `LocationScaleDensity` struct represents a conditional density estimator that models the conditional distribution of a target variable given a set of features. It combines a location model, a scale model, and a density model to estimate the conditional density.
-
-## Fields
-- `location_model::MMI.Supervised`: The location model used to estimate the conditional mean.
-- `scale_model::MMI.Supervised`: The scale model used to estimate the conditional variance.
-- `density_model::DensityEstimator`: The density model used to estimate the conditional density.
-- `r_density`: An MLJ range object over which `density_model` will be tuned.
-- `resampling::MT.ResamplingStrategy`: The resampling strategy used during model fitting.
-
-"""
 
 struct LocationScaleDensity <: ConDensityEstimator
     location_model::MMI.Supervised
@@ -18,6 +5,47 @@ struct LocationScaleDensity <: ConDensityEstimator
     density_model::DensityEstimator
     r_density
     resampling::MT.ResamplingStrategy
+
+    @doc raw"""
+        LocationScaleDensity(location_model::MMI.Supervised, 
+                             scale_model::MMI.Supervised, 
+                             density_model::DensityEstimator, 
+                             r_density, 
+                             resampling::MT.ResamplingStrategy
+                             )
+
+    A conditional density estimator that models the distribution of a target variable given a set of features. 
+    Crucially, this model assumes that the conditional distribution depends only on the covariates through the distribution's first two moments: that is, the mean and variance.
+    It works by:
+
+    1. Fitting a conditional mean (location) model and a conditional variance (scale) model for the target variable ``Y`` given the features ``X``.
+    2. Standardizing the target ``Y`` by subtracting the conditional mean and dividing by the square root of the conditional variance.
+    3. Performing kernel density estimation on the standardized residuals to estimate the conditional density.
+
+    Mathematically, this can be represented as the following steps:
+
+    1. Estimate ``\mu(X) = E[Y|X]`` using a supervised MLJ model.
+    2. Estimate ``\sigma^2(X) = Var[Y|X]`` using a supervised MLJ model.
+    3. Estimate density ``\rho(X)`` of ``(Y - \hat{\mu}(X))^2 / \hat{\sigma}^2(X)`` using kernel smoothing.
+    4. Estimate conditional density as ``p_n(Y|X) = \hat{\rho}((Y - \hat{\mu}(X))) / \hat{\sigma}(X)``
+
+    Hence, constructing a LocationScaleDensity model requires defining three sub-models: a location model, a scale model, and a density model. In addition, a range object is required to tune the density model, and a resampling strategy is required to fit the sub-models.
+
+    # Example:
+    ```@example
+    ```
+
+    ## Arguments
+    - `location_model::MMI.Supervised`: The location model used to estimate the conditional mean.
+    - `scale_model::MMI.Supervised`: The scale model used to estimate the conditional variance.
+    - `density_model::DensityEstimator`: The density model used to estimate the conditional density.
+    - `r_density`: An MLJ range object over which `density_model` will be tuned.
+    - `resampling::MT.ResamplingStrategy`: The resampling strategy used during model fitting.
+
+    """
+    function LocationScaleDensity(location_model::MMI.Supervised, scale_model::MMI.Supervised, density_model::DensityEstimator, r_density, resampling::MT.ResamplingStrategy)
+        new(location_model, scale_model, density_model, r_density, resampling)
+    end
 end
 
 function fit_factorized_density(model::LocationScaleDensity, verbosity, X, y)

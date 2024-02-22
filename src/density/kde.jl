@@ -1,16 +1,28 @@
-"""
-    mutable struct KDE <: DensityEstimator
 
-The `KDE` struct represents a Kernel Density Estimator.
-
-# Fields
-- `bandwidth::Float64`: The bandwidth parameter for the KDE.
-- `kernel`: The kernel function used for the KDE.
-
-"""
 mutable struct KDE <: DensityEstimator
     bandwidth::Float64
     kernel
+    
+    @doc raw"""
+        KDE(bandwidth::Float64, kernel::Function)
+
+    Wraps the Kernel Density Estimator from [KernelDensity.jl](https://github.com/JuliaStats/KernelDensity.jl) as an MLJ object. 
+    This model defines a density estimator that does not condition on any features, and is used to estimate the marginal density of a target variable.
+    It is mostly used as a component of a `LocationScaleDensity` model, though it can be used on its own.
+
+    For more information on Kernel Density Estimation, [see here](https://en.wikipedia.org/wiki/Kernel_density_estimation).
+
+    # Arguments
+    - `bandwidth::Float64`: The bandwidth parameter for the KDE.
+    - `kernel`: The kernel function used for the KDE. Default: Epanechnikov.
+
+    """
+    function KDE(bandwidth::Float64, kernel::Function)
+        if bandwidth <= 0
+            error("Bandwidth must be positive")
+        end
+        new(bandwidth, kernel)
+    end
 end
 
 KDE(bandwidth::Float64) = KDE(bandwidth, Epanechnikov)

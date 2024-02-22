@@ -13,6 +13,11 @@ using Random
 
 Random.seed!(1);
 
+
+# NOTE: If you have multiple interventions, i.e. a summarized A and A,
+# you MUST put the summarized column first in the y input table. 
+# Otherwise it will not work
+
 distseq = Vector{Pair{Symbol, CausalTables.ValidDGPTypes}}([
         :L1 => (; O...) -> DiscreteUniform(1, 5),
         :L1_s => NeighborSum(:L1),

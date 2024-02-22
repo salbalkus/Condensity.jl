@@ -29,7 +29,7 @@ include("density/oracle.jl")
 include("density/kde.jl")
 include("density/location_scale.jl")
 
-include("density_ratio/density_ratio_propensity.jl")
+include("density_ratio/density_ratio_plugin.jl")
 include("density_ratio/probabilistic_classifier.jl")
 
 
@@ -51,7 +51,7 @@ export KDE
 export LocationScaleDensity
 
 # density_ratio_propensity.jl
-export DensityRatioPropensity
+export DensityRatioPlugIn
 
 # probabilistic_classifier.jl
 export DensityRatioClassifier

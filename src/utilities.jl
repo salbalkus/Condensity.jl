@@ -95,3 +95,8 @@ function bound!(X::Vector; lower = -Inf, upper = Inf)
     X[X .> upper] .= upper
     X[X .< lower] .= lower
 end
+
+function bound!(X::Vector; lower = -Inf, upper = Inf)
+    X[X .> upper] .= upper
+    X[X .< lower] .= lower
+end

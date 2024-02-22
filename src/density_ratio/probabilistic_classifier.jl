@@ -1,6 +1,34 @@
+
 mutable struct DensityRatioClassifier <: ConDensityRatioEstimator
     classifier::MMI.Supervised
     resampling::MT.ResamplingStrategy
+
+    @doc raw"""
+        DensityRatioClassifier(classifier::MMI.Supervised, resampling::MT.ResamplingStrategy)
+
+    This model estimates a conditional density ratio using probabilistic classification. When predict is called, the following steps are performed:
+
+    1. Construct an augmented dataset by concatenating the data provided to the numerator and denominator data; that is, if the ratio is ``p_n(Y'|X) / p_d(Y|X)``, then the augmented dataset is ``(X, y, \Lambda)`` where ``\Lambda`` is a binary variable indicating whether the observation is from the numerator.
+    2. Fit a supervised classifier MLJ model to predict ``P(\Lambda = 1 | Y, X)``.
+    3. Apply Bayes' Theorem to compute the density ratio ``H_n(X) = \frac{p_n(Y'|X)}{p_n(Y|X)}`` as ``H_n(X) = \frac{P(\Lambda = 1 | Y, X)}{1 - P(\Lambda = 1 | Y, X)}`` using the classifier's predictions.
+
+    # Notes:
+    - *Strength*: This model can be used to estimate the density ratio accurately in high-dimensional settings.
+    - *Weakness*: This model requires a supervised classifier to be trained **for each call to `predict`**, which can be computationally expensive if many calls to `predict` are expected.
+
+    # Example:
+    ```@example
+
+    ``
+
+    # Arguments
+    - `classifier::MMI.Supervised`: The underlying supervised classifier used for density ratio estimation.
+    - `resampling::MT.ResamplingStrategy`: The resampling strategy used for training the classifier.
+
+    """
+    function DensityRatioClassifier(classifier::MMI.Supervised, resampling::MT.ResamplingStrategy)
+        new(classifier, resampling)
+    end
 end
 
 function MMI.fit(model::DensityRatioClassifier, verbosity, X, y)
