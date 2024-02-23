@@ -1,5 +1,5 @@
 
-struct LocationScaleDensity <: ConDensityEstimator
+mutable struct LocationScaleDensity <: ConDensityEstimator
     location_model::MMI.Supervised
     scale_model::MMI.Supervised
     density_model::DensityEstimator
@@ -31,8 +31,37 @@ struct LocationScaleDensity <: ConDensityEstimator
 
     Hence, constructing a LocationScaleDensity model requires defining three sub-models: a location model, a scale model, and a density model. In addition, a range object is required to tune the density model, and a resampling strategy is required to fit the sub-models.
 
-    # Example:
-    ```@example
+    # Example
+    ```jldoctest; output = false, filter = r"(?<=.{17}).*"s
+    using Condensity
+    using MLJ
+    using MLJLinearModels
+
+    # generate regression model data
+    n = 50
+    X = randn(n)
+    y = 4 .+ 2 .* X .+ randn(n)
+
+    # put data in Tables.jl-compliant format
+    X = (X = X,)
+    y = (y = y,)
+
+    # define and fit the model
+    location_model = LinearRegressor()
+    scale_model = ConstantRegressor()
+    density_model = KDE(0.001)
+
+    r = range(density_model, :bandwidth, lower=0.001, upper=0.5)
+    lse_model = LocationScaleDensity(location_model, scale_model, density_model, 
+                                    r, CV(nfolds=10))
+    lse_mach = machine(lse_model, X, y) |> fit!
+
+    # Get predictions
+    data = merge(X, y) # must collect data into a single table
+    predict(lse_mach, data)
+
+    # output
+    50-element Vector
     ```
 
     ## Arguments

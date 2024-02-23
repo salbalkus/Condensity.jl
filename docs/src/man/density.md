@@ -3,7 +3,7 @@
 Wraps [KernelDensity.jl](https://github.com/JuliaStats/KernelDensity.jl)
 
 ```@docs
-KDE
+KDE(bandwidth::Float64, kernel::Type)
 ```
 
 ```@docs

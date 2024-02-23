@@ -4,6 +4,7 @@ import MLJModelInterface
 import MLJTuning
 
 import MLJBase: train_test_pairs, Machine, machine, fit!, predict, categorical
+using Distributions
 import Distributions: convolve, pdf
 
 import StatsBase: mean

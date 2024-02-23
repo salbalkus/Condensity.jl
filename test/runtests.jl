@@ -64,10 +64,10 @@ end
     sum(@. prediction * log(prediction / true_density))
     @test sum(@. prediction * log(prediction / true_density)) < 50
 
-    # Test within DensityRatioPropensity
+    # Test within DensityRatioPlugIn
     Xy = reject(data, :Y, :A_s) |> Tables.columntable
     Xy_shift = (L1 = Tables.getcolumn(data, :L1), L1_s = Tables.getcolumn(data, :L1_s), A = Tables.getcolumn(data, :A) .- 0.5)
-    density_ratio_model = Condensity.DensityRatioPropensity(lse_model)
+    density_ratio_model = Condensity.DensityRatioPlugIn(lse_model)
 
     dr_mach = machine(density_ratio_model, X, y) |> fit!
     prediction_ratio = predict(dr_mach, Xy, Xy_shift)

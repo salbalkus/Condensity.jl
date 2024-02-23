@@ -17,8 +17,34 @@ mutable struct DensityRatioClassifier <: ConDensityRatioEstimator
     - *Weakness*: This model requires a supervised classifier to be trained **for each call to `predict`**, which can be computationally expensive if many calls to `predict` are expected.
 
     # Example:
-    ```@example
+    ```jldoctest; output = false, filter = r"(?<=.{17}).*"s
+    using Condensity
+    using MLJ
+    using MLJLinearModels
 
+    n = 50
+    X = randn(n)
+    Y = 4 .+ 2 .* X .+ randn(n)
+
+    X = (X = X,)
+    y = (y = Y,)
+
+    classifier_model = LogisticClassifier()
+    drc_model = DensityRatioClassifier(classifier_model, CV(nfolds = 10))
+
+    # note that no data is needed for the machine, since training the model is only required for inference
+    
+    dr_mach = machine(drc_model, nothing, nothing) |> fit!
+
+    # collect X and y for predicting the ratio between 
+    # densities of a shifted and unshifted dataset
+    denominator = merge(X, y) 
+    numerator = merge(X, (y = Y .- 0.1,))
+
+    predict(dr_mach, numerator, denominator)
+
+    # output
+    50-element Vector
     ``
 
     # Arguments

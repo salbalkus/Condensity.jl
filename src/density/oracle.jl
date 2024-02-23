@@ -19,9 +19,15 @@ mutable struct OracleDensityEstimator <: ConDensityEstimator
     - Unlike other MLJ models, both `X` and `y` must be in Table form when input to `machine`.
     - The predict method requires input as a Table containing the column names of both `X` and `y` that were provided during fitting.
 
-    # Example:
+    # Arguments
+    - `dgp::DataGeneratingProcess`: The data generating process used by the estimator, from the CausalTables package.
 
-    ```@example
+
+    # Example
+
+    ```jldoctest; output = false, filter = r"(?<=.{17}).*"s
+    using Condensity
+    using MLJ
     using CausalTables
 
     # Define a DataGeneratingProcess (DGP)
@@ -33,7 +39,7 @@ mutable struct OracleDensityEstimator <: ConDensityEstimator
     oracle = OracleDensityEstimator(dgp)
 
     # Construct data for testing
-    data = rand(dgp, 100)
+    data = rand(dgp, 50)
     X = (X = Tables.getcolumn(data, :X),)
     y = (y = Tables.getcolumn(data, :y),)
 
@@ -44,11 +50,9 @@ mutable struct OracleDensityEstimator <: ConDensityEstimator
     # Get predictions
     pred = predict(mach, data)
 
-    ````
-
-    # Fields:
-    - `dgp::DataGeneratingProcess`: The data generating process used by the estimator, from the CausalTables package.
-
+    # output
+    50-element Vector
+    ```
     """
     function OracleDensityEstimator(dgp::DataGeneratingProcess)
         new(dgp)
