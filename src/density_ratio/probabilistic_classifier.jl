@@ -16,7 +16,11 @@ mutable struct DensityRatioClassifier <: ConDensityRatioEstimator
     - *Strength*: This model can be used to estimate the density ratio accurately in high-dimensional settings.
     - *Weakness*: This model requires a supervised classifier to be trained **for each call to `predict`**, which can be computationally expensive if many calls to `predict` are expected.
 
-    # Example:
+    # Arguments
+    - `classifier::MMI.Supervised`: The underlying supervised classifier used for density ratio estimation.
+    - `resampling::MT.ResamplingStrategy`: The resampling strategy used for training the classifier.
+
+    # Example
     ```jldoctest; output = false, filter = r"(?<=.{17}).*"s
     using Condensity
     using MLJ
@@ -45,11 +49,7 @@ mutable struct DensityRatioClassifier <: ConDensityRatioEstimator
 
     # output
     50-element Vector
-    ``
-
-    # Arguments
-    - `classifier::MMI.Supervised`: The underlying supervised classifier used for density ratio estimation.
-    - `resampling::MT.ResamplingStrategy`: The resampling strategy used for training the classifier.
+    ```
 
     """
     function DensityRatioClassifier(classifier::MMI.Supervised, resampling::MT.ResamplingStrategy)

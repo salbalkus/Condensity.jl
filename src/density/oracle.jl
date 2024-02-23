@@ -3,7 +3,7 @@ mutable struct OracleDensityEstimator <: ConDensityEstimator
     dgp::DataGeneratingProcess
 
     @doc raw"""
-    mutable struct OracleDensityEstimator <: ConDensityEstimator
+        OracleDensityEstimator(dgp::DataGeneratingProcess)
 
     An "oracle" density estimator is a model that returns the *true* conditional density of a given variable. 
     Oracles are typically used for simulation and testing of methods that estimate conditional densities as nuisance parameters, in order to evaluate their performance when the underlying truth is known.

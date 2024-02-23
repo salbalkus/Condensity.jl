@@ -16,7 +16,7 @@ mutable struct DensityRatioPlugIn <: ConDensityRatioEstimator
     - `density_estimator::ConDensityEstimator`: The density estimator used to compute the numerator and denominator of the density ratio.
     - `truncate::Bool`: Whether to truncate the density estimates to avoid numerical instability. Default: `false`.
 
-    # Example:
+    # Example
     ```jldoctest; output = false, filter = r"(?<=.{17}).*"s
     using Condensity
     using MLJ
