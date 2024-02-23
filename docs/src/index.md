@@ -30,3 +30,45 @@ The models defined in Condensity.jl are compatible with many (but not all) MLJ f
 
 Here's a simple example of how to fit a conditional density estimator using Condensity.jl:
 
+```jldoctest; output = false, filter = r"(?<=.{17}).*"s
+using Condensity
+using MLJ
+using MLJLinearModels
+
+# generate regression model data
+n = 50
+X = randn(n)
+y = 4 .+ 2 .* X .+ randn(n)
+
+# put data in Tables.jl-compliant format
+X = (X = X,)
+y = (y = y,)
+
+# define and fit the model
+location_model = LinearRegressor()
+scale_model = ConstantRegressor()
+density_model = KDE(0.001)
+
+r = range(density_model, :bandwidth, lower=0.001, upper=0.5)
+lse_model = LocationScaleDensity(location_model, scale_model, density_model, 
+                                r, CV(nfolds=10))
+
+# bind the model to the data and fit
+lse_mach = machine(lse_model, X, y) |> fit!
+
+# make predictions
+data = merge(X, y) # must collect data into a single table
+predict(lse_mach, data)
+
+# output
+50-element Vector
+```
+
+## Where to go from here
+
+- If your goal is to estimate a conditional density of the form $p(Y|X)$, read through the various models in [Conditional Density Estimation](man/density.md).
+- If your goal is to estimate a conditional density ratio of the form $p(Y'|X)/p(Y|X)$ (for example, for estimating a *generalized propensity score*), please refer to the models listed in [Conditional Density Ratio Estimation](man/density-ratio.md)
+- If you want to simulate data and obtain the "underlying true conditional density" for the purpose of testing your models, please refer to the [Oracle Density Estimation using `CausalTables.jl`](man/oracle.md).
+- If you are new to MLJ, please refer to the [MLJ documentation](https://alan-turing-institute.github.io/MLJ.jl/dev/) for more information on how to generally fit models within the MLJ framework.
+
+
