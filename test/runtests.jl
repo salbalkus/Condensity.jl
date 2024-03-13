@@ -1,10 +1,10 @@
 using Test
+using CausalTables
 using Condensity
 using Distributions
 using MLJBase
 using MLJLinearModels
 using MLJModels
-using CausalTables
 using Tables
 using TableOperations
 using Graphs
@@ -13,16 +13,15 @@ using Random
 
 Random.seed!(1);
 
-
 # NOTE: If you have multiple interventions, i.e. a summarized A and A,
 # you MUST put the summarized column first in the y input table. 
 # Otherwise it will not work
 
 distseq = Vector{Pair{Symbol, CausalTables.ValidDGPTypes}}([
         :L1 => (; O...) -> DiscreteUniform(1, 5),
-        :L1_s => NeighborSum(:L1),
+        :L1_s => Sum(:L1, include_self = true),
         :A => (; O...) -> (@. Normal(O[:L1] + 0.2 * O[:L1_s], 0.5)),
-        :A_s => NeighborSum(:A),
+        :A_s => Sum(:A, include_self = true),
         :Y => (; O...) -> (@. Normal(O[:A] + O[:A_s] + 0.2 * O[:L1], 1))
     ])
 
@@ -101,10 +100,9 @@ end
         ])
 
     Xy_nu = rand(dgp, 500)
-    Xy_de = replacetable(Xy_nu, (X = Tables.getcolumn(Xy_nu, :X), y = Tables.getcolumn(Xy_nu, :y) .- 0.1))
-
+    Xy_de = CausalTables.replacetable(Xy_nu, (X = Tables.getcolumn(Xy_nu, :X), y = Tables.getcolumn(Xy_nu, :y) .- 0.1))
     classifier_model = LogisticClassifier()
-    drc_model = DensityRatioClassifier(classifier_model, CV(nfolds = 10))
+    drc_model = DensityRatioClassifier(classifier_model)
 
     drc_mach = machine(drc_model, Xy_nu, Xy_de) |> fit!
     prediction_ratio = predict(drc_mach, Xy_nu)
