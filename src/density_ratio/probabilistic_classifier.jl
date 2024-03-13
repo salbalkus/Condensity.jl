@@ -1,7 +1,6 @@
 
 mutable struct DensityRatioClassifier <: ConDensityRatioEstimator
     classifier::MMI.Probabilistic
-    resampling::MT.ResamplingStrategy
 
     @doc raw"""
         DensityRatioClassifier(classifier::MMI.Supervised, resampling::MT.ResamplingStrategy)
@@ -29,17 +28,14 @@ mutable struct DensityRatioClassifier <: ConDensityRatioEstimator
     y = (y = Y,)
 
     classifier_model = LogisticClassifier()
-    drc_model = DensityRatioClassifier(classifier_model, CV(nfolds = 10))
-
-    # note that no data is needed for the machine, since training the model is only required for inference
-    
-    dr_mach = machine(drc_model, nothing, nothing) |> fit!
+    drc_model = DensityRatioClassifier(classifier_model)    
 
     # collect X and y for predicting the ratio between 
     # densities of a shifted and unshifted dataset
     denominator = merge(X, y) 
     numerator = merge(X, (y = Y .- 0.1,))
 
+    dr_mach = machine(drc_model, numerator, denominator) |> fit!
     predict(dr_mach, numerator, denominator)
 
     # output
@@ -47,8 +43,8 @@ mutable struct DensityRatioClassifier <: ConDensityRatioEstimator
     ```
 
     """
-    function DensityRatioClassifier(classifier::MMI.Supervised, resampling::MT.ResamplingStrategy)
-        new(classifier, resampling)
+    function DensityRatioClassifier(classifier::MMI.Supervised)
+        new(classifier)
     end
 end
 
