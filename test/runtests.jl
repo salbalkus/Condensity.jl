@@ -101,22 +101,20 @@ end
         ])
 
     Xy_nu = rand(dgp, 500)
-    Xy_de = (X = Tables.getcolumn(Xy_nu, :X), y = Tables.getcolumn(Xy_nu, :y) .- 0.1)
+    Xy_de = replacetable(Xy_nu, (X = Tables.getcolumn(Xy_nu, :X), y = Tables.getcolumn(Xy_nu, :y) .- 0.1))
 
     classifier_model = LogisticClassifier()
     drc_model = DensityRatioClassifier(classifier_model, CV(nfolds = 10))
 
-    drc_mach = machine(drc_model, nothing, nothing) |> fit!
-    prediction_ratio = predict(drc_mach, Xy_nu, Xy_de)
-
+    drc_mach = machine(drc_model, Xy_nu, Xy_de) |> fit!
+    prediction_ratio = predict(drc_mach, Xy_nu)
+    
     @test prediction_ratio isa Array{Float64,1}
     @test all(@. prediction_ratio > 0)
 
     # Test that this is close to the true density ratio
-    true_model = DensityRatioPropensity(OracleDensityEstimator(dgp))
+    true_model = DensityRatioPlugIn(OracleDensityEstimator(dgp))
     true_mach = machine(true_model, reject(Xy_nu, :y), (y = Tables.getcolumn(Xy_nu, :y),)) |> fit!
     true_prediction_ratio = predict(true_mach, Xy_nu, Xy_de)
-
     @test mean(@. (true_prediction_ratio - prediction_ratio)^2) < 0.05
-    
 end
