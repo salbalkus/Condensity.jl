@@ -22,6 +22,9 @@ const MT = MLJTuning
 abstract type DensityEstimator <: MMI.Deterministic end
 abstract type ConDensityEstimator <: MMI.Deterministic end
 abstract type ConDensityRatioEstimator <: MMI.Deterministic end
+abstract type ConDensityRatioEstimatorAdaptive <: ConDensityRatioEstimator end
+abstract type ConDensityRatioEstimatorFixed <: ConDensityRatioEstimator end
+
 
 ### Includes ###
 include("utilities.jl")

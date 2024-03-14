@@ -1,5 +1,5 @@
 
-mutable struct DensityRatioPlugIn <: ConDensityRatioEstimator
+mutable struct DensityRatioPlugIn <: ConDensityRatioEstimatorAdaptive
     density_estimator::ConDensityEstimator
     truncate::Bool
 
@@ -11,6 +11,8 @@ mutable struct DensityRatioPlugIn <: ConDensityRatioEstimator
 
     1. Estimate ``p_n(Y|X)`` using a conditional density estimator.
     2. Directly compute the density ratio ``H_n(X) = \hat{p}_n(Y'|X) / \hat{p}_n(Y|X)`` by plugging in predictions from the fitted ``\hat{p}_n(Y|X)``.
+
+    The major advantage of this estimator is that it requires only a single ``y`` to fit, and can be used to estimate the ratio between any values of ``y`` thereafter
 
     # Arguments
     - `density_estimator::ConDensityEstimator`: The density estimator used to compute the numerator and denominator of the density ratio.

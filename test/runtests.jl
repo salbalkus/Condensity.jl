@@ -52,7 +52,6 @@ end
     y = TableOperations.select(sdata, :A) |> Tables.columntable
     
     lse_mach = machine(lse_model, X, y) |> fit!
-    lse_mach.fitresult
     prediction = predict(lse_mach, reject(sdata, :Y) |> Tables.columntable)
 
     @test prediction isa Array{Float64,1}
@@ -60,7 +59,6 @@ end
 
     # TODO: Need a better test to determine this actually works
     true_density = pdf.(condensity(dgp, data, :A), y.A)
-    sum(@. prediction * log(prediction / true_density))
     @test sum(@. prediction * log(prediction / true_density)) < 50
 
     # Test within DensityRatioPlugIn
@@ -80,15 +78,16 @@ end
     condensity_model = Condensity.OracleDensityEstimator(dgp)
 
     X = reject(data, :A, :A_s, :Y) |> Tables.columntable
-    y = TableOperations.select(data, :A_s, :A) |> Tables.columntable
+    y = TableOperations.select(data, :A) |> Tables.columntable
     condensity_mach = machine(condensity_model, X, y) |> fit!
     prediction = predict(condensity_mach, sdata)
-
     @test prediction isa Array{Float64,1}
     @test all(@. prediction > 0 && prediction < 1)
 
-    true_density = pdf.(condensity(dgp, sdata, :A_s), y.A_s) .* pdf.(condensity(dgp, sdata, :A), y.A)
+    true_density = pdf.(condensity(dgp, sdata, :A), y.A)
     @test all(@. prediction > 0 && prediction < 1)
+    true_density
+    prediction
     @test all(prediction .== true_density)
 end
 
@@ -105,7 +104,7 @@ end
     drc_model = DensityRatioClassifier(classifier_model)
 
     drc_mach = machine(drc_model, Xy_nu, Xy_de) |> fit!
-    prediction_ratio = predict(drc_mach, Xy_nu)
+    prediction_ratio = predict(drc_mach, Xy_nu, Xy_de)
     
     @test prediction_ratio isa Array{Float64,1}
     @test all(@. prediction_ratio > 0)

@@ -77,7 +77,7 @@ mutable struct LocationScaleDensity <: ConDensityEstimator
     end
 end
 
-function fit_factorized_density(model::LocationScaleDensity, verbosity, X, y)
+function fit_density(model::LocationScaleDensity, verbosity, X, y)
     
     # Fit the location model
     location_mach = machine(model.location_model, X, y) |> fit!
@@ -111,32 +111,23 @@ function fit_factorized_density(model::LocationScaleDensity, verbosity, X, y)
 end
 
 function MMI.fit(model::LocationScaleDensity, verbosity, X, y)
-    
-    location_machs = Vector{Machine}(undef, DataAPI.ncol(y))
-    scale_machs = Vector{Machine}(undef, DataAPI.ncol(y))
-    density_machs = Vector{Machine}(undef, DataAPI.ncol(y))
-    min_obs_ε2s = Vector{Float64}(undef, DataAPI.ncol(y))
 
-    Xy = merge_tables(X, y)
-    target_names = Tables.columnnames(y)
-    for (i, target) in enumerate(target_names)
-        y_cur = Tables.getcolumn(y, target)
-        Xy_cur = reject(Xy, target_names[1:i]...) |> Tables.columntable
-        location_machs[i], scale_machs[i], density_machs[i], min_obs_ε2s[i] = fit_factorized_density(model, verbosity, Xy_cur, y_cur)
-    end
+    targetname = Tables.columnnames(y)[1]
+    y_vec = Tables.getcolumn(y, targetname)
+    location_mach, scale_mach, density_mach, min_obs_ε2 = fit_density(model, verbosity, X, y_vec)
     
-    fitresult = (location_machs = location_machs,  
-                 scale_machs = scale_machs, 
-                 density_machs = density_machs, 
-                 min_obs_ε2s = min_obs_ε2s, 
-                 target_names = target_names
+    fitresult = (location_mach = location_mach,  
+                 scale_mach = scale_mach, 
+                 density_mach = density_mach, 
+                 min_obs_ε2 = min_obs_ε2, 
+                 targetname = targetname
                  )
     cache = nothing
     report = nothing
     return fitresult, cache, report
 end
 
-function predict_factorized_density(location_mach, scale_mach, density_mach, min_obs_ε2, X, y)
+function predict_density(location_mach, scale_mach, density_mach, min_obs_ε2, X, y)
 
     # Get residual model predictions
     μ = MMI.predict_mean(location_mach, X)
@@ -151,18 +142,15 @@ end
 
 function MMI.predict(model::LocationScaleDensity, fitresult, Xy) 
 
-    density = 1.0
-
-    for (i, target) in enumerate(fitresult.target_names)
-        y_cur = Tables.getcolumn(Xy, target)
-        Xy_cur = reject(Xy, fitresult.target_names[1:i]...) |> Tables.columntable
-        density = density .* predict_factorized_density(fitresult.location_machs[i], 
-                                              fitresult.scale_machs[i], 
-                                              fitresult.density_machs[i], 
-                                              fitresult.min_obs_ε2s[i], 
+    # split off y
+    y_cur = Tables.getcolumn(Xy, fitresult.targetname)
+    Xy_cur = reject(Xy, fitresult.targetname) |> Tables.columntable
+    # compute density
+    density = predict_density(fitresult.location_mach, 
+                                              fitresult.scale_mach, 
+                                              fitresult.density_mach, 
+                                              fitresult.min_obs_ε2, 
                                               Xy_cur, y_cur)
-    end
-
     return density
 end
 
