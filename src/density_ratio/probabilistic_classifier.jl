@@ -39,8 +39,8 @@ predict(dr_mach, numerator, denominator)
 ```
 
 """
-mutable struct DensityRatioClassifier <: ConDensityRatioEstimatorFixed
-    classifier::MMI.Probabilistic
+mutable struct DensityRatioClassifier{T <: MMI.Probabilistic} <: ConDensityRatioEstimatorFixed
+    classifier::T
 end
 
 
