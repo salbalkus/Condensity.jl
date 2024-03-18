@@ -130,4 +130,21 @@ end
     @test mean(@. (est_ratio - true_ratio)^2) < 0.05
 end
 
+#@testset "Kernel" begin
+    Xy_nu = replacetable(data, TableOperations.select(data, :L1, :A) |> Tables.columntable)
+    Xy_de = replacetable(data, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
+
+    truedr_model = DensityRatioPlugIn(Condensity.OracleDensityEstimator(dgp))
+    X = reject(data, :A, :A_s, :Y) |> Tables.columntable
+    y = TableOperations.select(data, :A) |> Tables.columntable
+    truedr_mach = machine(truedr_model, X, y) |> fit!
+    true_ratio = predict(truedr_mach, Xy_de, Xy_nu)
+
+    kernel_model = DensityRatioKernel(KMM())
+    kernel_mach = machine(kernel_model, Xy_nu, Xy_de) |> fit!
+    est_ratio = predict(kliep_mach, Xy_nu, Xy_de)
+    # Test if predictions are close to truth
+    @test mean(@. (est_ratio - true_ratio)^2) < 0.05
+end
+
 
