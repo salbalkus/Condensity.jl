@@ -66,7 +66,7 @@ end
 
 function MMI.predict(::DensityRatioClassifier, fitresult, Xy_nu, Xy_de)
     pred = predict(fitresult.classifier_machine, Xy_nu)
-    prob_orig = pdf.(pred, false)
-    prob_shift = pdf.(pred, true)
+    prob_orig = pdf.(pred, true)
+    prob_shift = pdf.(pred, false)
     return fitresult.n_ratio .* prob_orig ./ prob_shift
 end

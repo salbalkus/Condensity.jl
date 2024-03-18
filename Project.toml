@@ -6,6 +6,7 @@ version = "1.0.0-DEV"
 [deps]
 CausalTables = "6af48e0c-efc2-4bf7-a92f-a553ccf79fd6"
 DataAPI = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
+DensityRatioEstimation = "ab46fb84-d57c-11e9-2f65-6f72e4a7229f"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 GaussianProcesses = "891a1506-143c-57d2-908e-e1f8e92e6de9"

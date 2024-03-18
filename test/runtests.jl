@@ -8,6 +8,7 @@ using MLJModels
 using Tables
 using TableOperations
 using Graphs
+using DensityRatioEstimation
 
 using Random
 
@@ -18,11 +19,9 @@ Random.seed!(1);
 # Otherwise it will not work
 
 distseq = Vector{Pair{Symbol, CausalTables.ValidDGPTypes}}([
-        :L1 => (; O...) -> DiscreteUniform(1, 5),
-        :L1_s => Sum(:L1, include_self = true),
-        :A => (; O...) -> (@. Normal(O[:L1] + 0.2 * O[:L1_s], 0.5)),
-        :A_s => Sum(:A, include_self = true),
-        :Y => (; O...) -> (@. Normal(O[:A] + O[:A_s] + 0.2 * O[:L1], 1))
+        :L1 => (; O...) -> DiscreteUniform(1,4),
+        :A => (; O...) -> (@. Normal(O[:L1], 0.5)),
+        :Y => (; O...) -> (@. Normal(O[:A] + 0.2 * O[:L1], 1))
     ])
 
 dgp = DataGeneratingProcess(n -> random_regular_graph(n, 2), distseq; treatment = :A, response = :Y, controls = [:L1]);
@@ -39,7 +38,24 @@ sdata = summarize(data)
     @test all(@. prediction > 0 && prediction < 1)
 end
 
-# TODO: Several inaccuracy issues with this test... need to delve deeper
+@testset "OracleDensity" begin
+
+    condensity_model = Condensity.OracleDensityEstimator(dgp)
+
+    X = reject(data, :A, :Y) |> Tables.columntable
+    y = TableOperations.select(data, :A) |> Tables.columntable
+    condensity_mach = machine(condensity_model, X, y) |> fit!
+    prediction = predict(condensity_mach, sdata)
+    @test prediction isa Array{Float64,1}
+    @test all(@. prediction > 0 && prediction < 1)
+
+    true_density = pdf.(condensity(dgp, sdata, :A), y.A)
+    @test all(@. prediction > 0 && prediction < 1)
+    true_density
+    prediction
+    @test all(prediction .== true_density)
+end
+
 @testset "LocationScaleDensity" begin
     location_model = LinearRegressor()
     scale_model = ConstantRegressor()
@@ -48,7 +64,7 @@ end
     r = range(density_model, :bandwidth, lower=0.001, upper=0.5)
     lse_model = LocationScaleDensity(location_model, scale_model, density_model, r, CV(nfolds=10))
 
-    X = reject(sdata, :A, :A_s, :Y) |> Tables.columntable
+    X = reject(sdata, :A, :Y) |> Tables.columntable
     y = TableOperations.select(sdata, :A) |> Tables.columntable
     
     lse_mach = machine(lse_model, X, y) |> fit!
@@ -63,7 +79,7 @@ end
 
     # Test within DensityRatioPlugIn
     Xy = reject(data, :Y, :A_s) |> Tables.columntable
-    Xy_shift = (L1 = Tables.getcolumn(data, :L1), L1_s = Tables.getcolumn(data, :L1_s), A = Tables.getcolumn(data, :A) .- 0.5)
+    Xy_shift = (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.5)
     density_ratio_model = Condensity.DensityRatioPlugIn(lse_model)
 
     dr_mach = machine(density_ratio_model, X, y) |> fit!
@@ -73,33 +89,11 @@ end
     @test all(@. prediction_ratio > 0)
 end
 
-@testset "OracleDensity" begin
-
-    condensity_model = Condensity.OracleDensityEstimator(dgp)
-
-    X = reject(data, :A, :A_s, :Y) |> Tables.columntable
-    y = TableOperations.select(data, :A) |> Tables.columntable
-    condensity_mach = machine(condensity_model, X, y) |> fit!
-    prediction = predict(condensity_mach, sdata)
-    @test prediction isa Array{Float64,1}
-    @test all(@. prediction > 0 && prediction < 1)
-
-    true_density = pdf.(condensity(dgp, sdata, :A), y.A)
-    @test all(@. prediction > 0 && prediction < 1)
-    true_density
-    prediction
-    @test all(prediction .== true_density)
-end
-
 @testset "DensityRatioClassifier" begin
 
-    dgp = DataGeneratingProcess([
-            :X => (; O...) -> Normal(0, 1),
-            :y => (; O...) -> @. Normal(3 * O[:X] + 3, 1)
-        ])
+    Xy_de = replacetable(sdata, TableOperations.select(data, :L1, :A) |> Tables.columntable)
+    Xy_nu = replacetable(sdata, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
 
-    Xy_nu = rand(dgp, 500)
-    Xy_de = CausalTables.replacetable(Xy_nu, (X = Tables.getcolumn(Xy_nu, :X), y = Tables.getcolumn(Xy_nu, :y) .- 0.1))
     classifier_model = LogisticClassifier()
     drc_model = DensityRatioClassifier(classifier_model)
 
@@ -111,7 +105,15 @@ end
 
     # Test that this is close to the true density ratio
     true_model = DensityRatioPlugIn(OracleDensityEstimator(dgp))
-    true_mach = machine(true_model, reject(Xy_nu, :y), (y = Tables.getcolumn(Xy_nu, :y),)) |> fit!
+    X = reject(data, :A, :A_s, :Y) |> Tables.columntable
+    y = TableOperations.select(data, :A) |> Tables.columntable
+    true_mach = machine(true_model, X, y) |> fit!
     true_prediction_ratio = predict(true_mach, Xy_nu, Xy_de)
+
+    # Test if predictions are close to truth
     @test mean(@. (true_prediction_ratio - prediction_ratio)^2) < 0.05
 end
+
+
+
+
