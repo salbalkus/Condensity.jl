@@ -13,6 +13,7 @@ using Tables
 using TableOperations
 using DataAPI
 using CausalTables
+using DensityRatioEstimation
 
 const PKG = "Condensity"          # substitute model-providing package name
 const MMI = MLJModelInterface
@@ -35,7 +36,7 @@ include("density/location_scale.jl")
 
 include("density_ratio/density_ratio_plugin.jl")
 include("density_ratio/probabilistic_classifier.jl")
-
+include("density_ratio/density_ratio_kliep.jl")
 
 
 ### Exports ###
@@ -59,6 +60,9 @@ export DensityRatioPlugIn
 
 # probabilistic_classifier.jl
 export DensityRatioClassifier
+
+# density_ratio_kliep.jl
+export DensityRatioKLIEP
 
 # golden_section_search.jl
 

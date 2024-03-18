@@ -1,16 +1,28 @@
-mutable struct DensityRatioKLIEP<: ConDensityRatioEstimatorFixed end
+mutable struct DensityRatioKLIEP<: ConDensityRatioEstimatorFixed 
+    σ::Array{Float64,1}
+    b::Array{Int,1}
+end
 
 function MMI.fit(model::DensityRatioKLIEP, verbosity, Xy_nu, Xy_de)
 
-    fitresult = (classifier_machine = classifier_mach, n_ratio = n_de / n_nu)
+    # Convert data into a vector of tuples for use by DensityRatioEstimation
+    x_nu = rowtable(Xy_nu)
+    x_de = rowtable(Xy_de)
+
+    # Optimize hyperparameters for the KLIEP method
+    dre = DensityRatioEstimation.fit(KLIEP, x_nu, x_de, LCV((σ=model.σ,b=model.b)))
+
+    fitresult = (; dre = dre,)
     cache = nothing
     report = nothing
     return fitresult, cache, report
 end
 
-function MMI.predict(::DensityRatioClassifier, fitresult, Xy_nu, Xy_de)
-    pred = predict(fitresult.classifier_machine, Xy_nu)
-    prob_orig = pdf.(pred, false)
-    prob_shift = pdf.(pred, true)
-    return fitresult.n_ratio .* prob_orig ./ prob_shift
+function MMI.predict(::DensityRatioKLIEP, fitresult, Xy_nu, Xy_de)
+
+    # Convert data into a vector of tuples for use by DensityRatioEstimation
+    x_nu = rowtable(Xy_nu)
+    x_de = rowtable(Xy_de)
+
+    return densratio(x_nu, x_de, fitresult.dre)
 end

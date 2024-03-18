@@ -26,7 +26,6 @@ distseq = Vector{Pair{Symbol, CausalTables.ValidDGPTypes}}([
 
 dgp = DataGeneratingProcess(n -> random_regular_graph(n, 2), distseq; treatment = :A, response = :Y, controls = [:L1]);
 data = rand(dgp, 100)
-sdata = summarize(data)
 
 @testset "KDE" begin
     n = 100
@@ -45,11 +44,11 @@ end
     X = reject(data, :A, :Y) |> Tables.columntable
     y = TableOperations.select(data, :A) |> Tables.columntable
     condensity_mach = machine(condensity_model, X, y) |> fit!
-    prediction = predict(condensity_mach, sdata)
+    prediction = predict(condensity_mach, data)
     @test prediction isa Array{Float64,1}
     @test all(@. prediction > 0 && prediction < 1)
 
-    true_density = pdf.(condensity(dgp, sdata, :A), y.A)
+    true_density = pdf.(condensity(dgp, data, :A), y.A)
     @test all(@. prediction > 0 && prediction < 1)
     true_density
     prediction
@@ -64,11 +63,11 @@ end
     r = range(density_model, :bandwidth, lower=0.001, upper=0.5)
     lse_model = LocationScaleDensity(location_model, scale_model, density_model, r, CV(nfolds=10))
 
-    X = reject(sdata, :A, :Y) |> Tables.columntable
-    y = TableOperations.select(sdata, :A) |> Tables.columntable
+    X = reject(data, :A, :Y) |> Tables.columntable
+    y = TableOperations.select(data, :A) |> Tables.columntable
     
     lse_mach = machine(lse_model, X, y) |> fit!
-    prediction = predict(lse_mach, reject(sdata, :Y) |> Tables.columntable)
+    prediction = predict(lse_mach, reject(data, :Y) |> Tables.columntable)
 
     @test prediction isa Array{Float64,1}
     @test all(@. prediction >= 0 && prediction < 1)
@@ -91,8 +90,8 @@ end
 
 @testset "DensityRatioClassifier" begin
 
-    Xy_de = replacetable(sdata, TableOperations.select(data, :L1, :A) |> Tables.columntable)
-    Xy_nu = replacetable(sdata, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
+    Xy_de = replacetable(data, TableOperations.select(data, :L1, :A) |> Tables.columntable)
+    Xy_nu = replacetable(data, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
 
     classifier_model = LogisticClassifier()
     drc_model = DensityRatioClassifier(classifier_model)
@@ -114,6 +113,22 @@ end
     @test mean(@. (true_prediction_ratio - prediction_ratio)^2) < 0.05
 end
 
+#@testset "KLIEP" begin
+    Xy_nu = replacetable(data, TableOperations.select(data, :L1, :A) |> Tables.columntable)
+    Xy_de = replacetable(data, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
 
+    truedr_model = DensityRatioPlugIn(Condensity.OracleDensityEstimator(dgp))
+    X = reject(data, :A, :A_s, :Y) |> Tables.columntable
+    y = TableOperations.select(data, :A) |> Tables.columntable
+    truedr_mach = machine(truedr_model, X, y) |> fit!
+    true_ratio = predict(truedr_mach, Xy_de, Xy_nu)
+
+    kliep_model = DensityRatioKLIEP(0.2 .* (1:5), [200])
+    kliep_mach = machine(kliep_model, Xy_nu, Xy_de) |> fit!
+    est_ratio = densratio(Xy_nu, Xy_de, dre)
+    # Test if predictions are close to truth
+    @test mean(@. (est_ratio - true_ratio)^2) < 0.05
+
+end
 
 
