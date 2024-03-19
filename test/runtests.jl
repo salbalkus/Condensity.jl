@@ -113,19 +113,21 @@ end
 end
 
 @testset "KLIEP" begin
-    Xy_nu = replacetable(data, TableOperations.select(data, :L1, :A) |> Tables.columntable)
-    Xy_de = replacetable(data, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
+    Xy_de = replacetable(data, TableOperations.select(data, :L1, :A) |> Tables.columntable)
+    Xy_nu = replacetable(data, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
 
     truedr_model = DensityRatioPlugIn(Condensity.OracleDensityEstimator(dgp))
     X = reject(data, :A, :A_s, :Y) |> Tables.columntable
     y = TableOperations.select(data, :A) |> Tables.columntable
     truedr_mach = machine(truedr_model, X, y) |> fit!
-    true_ratio = predict(truedr_mach, Xy_de, Xy_nu)
+    true_ratio = predict(truedr_mach, Xy_nu, Xy_de)
 
-    kliep_model = DensityRatioKLIEP(0.2 .* (1:4), [200])
+    kliep_model = DensityRatioKLIEP(collect(0.2 .* (1:4)), [100])
+
     kliep_mach = machine(kliep_model, Xy_nu, Xy_de) |> fit!
     est_ratio = predict(kliep_mach, Xy_nu, Xy_de)
     # Test if predictions are close to truth
+    
     @test mean(@. (est_ratio - true_ratio)^2) < 0.05
 end
 

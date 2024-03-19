@@ -3,7 +3,7 @@ mutable struct DensityRatioKLIEP<: ConDensityRatioEstimatorFixed
     b::Array{Int,1}
 end
 
-function MMI.fit(model::DensityRatioKLIEP, verbosity, Xy_nu, Xy_de)
+function MMI.fit(model::DensityRatioKLIEP, verbosity, Xy_de, Xy_nu)
 
     # Convert data into a vector of tuples for use by DensityRatioEstimation
     x_nu = rowtable(Xy_nu)
@@ -18,7 +18,7 @@ function MMI.fit(model::DensityRatioKLIEP, verbosity, Xy_nu, Xy_de)
     return fitresult, cache, report
 end
 
-function MMI.predict(::DensityRatioKLIEP, fitresult, Xy_nu, Xy_de)
+function MMI.predict(::DensityRatioKLIEP, fitresult, Xy_de, Xy_nu)
 
     # Convert data into a vector of tuples for use by DensityRatioEstimation
     x_nu = rowtable(Xy_nu)
