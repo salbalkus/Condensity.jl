@@ -19,41 +19,10 @@ and how to use it to conveniently generate data for statistical simulations.
 # Arguments
 - `dgp::DataGeneratingProcess`: The data generating process used by the estimator, from the CausalTables package.
 
-
-# Example
-
-```jldoctest; output = false, filter = r"(?<=.{17}).*"s
-using Condensity
-using MLJ
-using CausalTables
-
-# Define a DataGeneratingProcess (DGP)
-dgp = DataGeneratingProcess([
-:X => (; O...) -> Normal(0, 1), 
-:y => (; O...) -> Normal(3 * O[:X] + 3, 1)])
-
-# Construct an OracleDensityEstimator from the DGP
-oracle = OracleDensityEstimator(dgp)
-
-# Construct data for testing
-data = rand(dgp, 50)
-X = (X = Tables.getcolumn(data, :X),)
-y = (y = Tables.getcolumn(data, :y),)
-
-# Fit the OracleDensityEstimator to the data
-# Note that `data` contains both the columns of `X` and `y`
-mach = machine(oracle, data, y) |> fit!
-
-# Get predictions
-pred = predict(mach, data)
-
-# output
-50-element Vector
-```
 """
 
 mutable struct OracleDensityEstimator <: ConDensityEstimator
-    dgp::DataGeneratingProcess
+    scm::StructuralCausalModel
 end
 
 """
@@ -96,6 +65,6 @@ Predict the density using the OracleDensityEstimator model.
 """
 function MMI.predict(model::OracleDensityEstimator, fitresult, Xy)
     y = Tables.getcolumn(Xy, fitresult.targetname)
-    return pdf.(condensity(model.dgp, Xy, fitresult.targetname), y)
+    return pdf.(condensity(model.scm, Xy, fitresult.targetname), y)
 end
 

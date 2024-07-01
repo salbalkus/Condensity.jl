@@ -6,7 +6,7 @@ using MLJBase
 using MLJLinearModels
 using MLJModels
 using Tables
-using TableOperations
+using TableTransforms
 using DensityRatioEstimation
 
 using Random
@@ -17,14 +17,14 @@ Random.seed!(1);
 # you MUST put the summarized column first in the y input table. 
 # Otherwise it will not work
 
-distseq = Vector{Pair{Symbol, CausalTables.ValidDGPTypes}}([
-        :L1 => (; O...) -> DiscreteUniform(1,4),
-        :A => (; O...) -> (@. Normal(O[:L1], 0.5)),
-        :Y => (; O...) -> (@. Normal(O[:A] + 0.2 * O[:L1], 1))
-    ])
+dgp = @dgp(
+    L1 ~ DiscreteUniform(1, 4),
+    A ~ Normal.(L1, 0.5),
+    Y ~ Normal.(A + 0.2 * L1, 1)
+)
 
-dgp = DataGeneratingProcess(distseq; treatment = :A, response = :Y, controls = [:L1]);
-data = rand(dgp, 100)
+scm = StructuralCausalModel(dgp; treatment = :A, response = :Y, confounders = [:L1]);
+data = rand(scm, 100)
 
 @testset "KDE" begin
     n = 100
@@ -38,16 +38,15 @@ end
 
 @testset "OracleDensity" begin
 
-    condensity_model = Condensity.OracleDensityEstimator(dgp)
+    condensity_model = Condensity.OracleDensityEstimator(scm)
 
-    X = reject(data, :A, :Y) |> Tables.columntable
-    y = TableOperations.select(data, :A) |> Tables.columntable
+    X = data |> TableTransforms.Reject(:A, :Y)
+    y = data |> TableTransforms.Select(:A)
     condensity_mach = machine(condensity_model, X, y) |> fit!
     prediction = predict(condensity_mach, data)
     @test prediction isa Array{Float64,1}
     @test all(@. prediction > 0 && prediction < 1)
-
-    true_density = pdf.(condensity(dgp, data, :A), y.A)
+    true_density = pdf.(condensity(scm, data, :A), Tables.getcolumn(y, :A))
     @test all(@. prediction > 0 && prediction < 1)
     true_density
     prediction
@@ -62,21 +61,22 @@ end
     r = range(density_model, :bandwidth, lower=0.001, upper=0.5)
     lse_model = LocationScaleDensity(location_model, scale_model, density_model, r, CV(nfolds=10))
 
-    X = reject(data, :A, :Y) |> Tables.columntable
-    y = TableOperations.select(data, :A) |> Tables.columntable
+    X = data |> TableTransforms.Reject(:A, :Y)
+    y = data |> TableTransforms.Select(:A)
     
     lse_mach = machine(lse_model, X, y) |> fit!
-    prediction = predict(lse_mach, reject(data, :Y) |> Tables.columntable)
+    prediction = predict(lse_mach, data |> TableTransforms.Reject(:Y))
 
     @test prediction isa Array{Float64,1}
     @test all(@. prediction >= 0 && prediction < 1)
 
     # TODO: Need a better test to determine this actually works
-    true_density = pdf.(condensity(dgp, data, :A), y.A)
+    true_density = pdf.(condensity(scm, data, :A), Tables.getcolumn(y, :A))
     @test sum(@. prediction * log(prediction / true_density)) < 50
 
     # Test within DensityRatioPlugIn
-    Xy = reject(data, :Y, :A_s) |> Tables.columntable
+    
+    Xy = data |> TableTransforms.Reject(:Y) |> Tables.columntable
     Xy_shift = (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.5)
     density_ratio_model = Condensity.DensityRatioPlugIn(lse_model)
 
@@ -89,8 +89,8 @@ end
 
 @testset "DensityRatioClassifier" begin
 
-    Xy_de = replacetable(data, TableOperations.select(data, :L1, :A) |> Tables.columntable)
-    Xy_nu = replacetable(data, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
+    Xy_de = CausalTables.replace(data; data = data |> TableTransforms.Select(:L1, :A))
+    Xy_nu = CausalTables.replace(data; data = (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
 
     classifier_model = LogisticClassifier()
     drc_model = DensityRatioClassifier(classifier_model)
@@ -102,9 +102,9 @@ end
     @test all(@. prediction_ratio > 0)
 
     # Test that this is close to the true density ratio
-    true_model = DensityRatioPlugIn(OracleDensityEstimator(dgp))
-    X = reject(data, :A, :A_s, :Y) |> Tables.columntable
-    y = TableOperations.select(data, :A) |> Tables.columntable
+    true_model = DensityRatioPlugIn(OracleDensityEstimator(scm))
+    X = data |> TableTransforms.Reject(:A, :Y)
+    y = data |> TableTransforms.Select(:A)
     true_mach = machine(true_model, X, y) |> fit!
     true_prediction_ratio = predict(true_mach, Xy_nu, Xy_de)
 
@@ -113,12 +113,12 @@ end
 end
 
 @testset "KLIEP" begin
-    Xy_de = replacetable(data, TableOperations.select(data, :L1, :A) |> Tables.columntable)
-    Xy_nu = replacetable(data, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
+    Xy_de = CausalTables.replace(data; data = data |> TableTransforms.Select(:L1, :A))
+    Xy_nu = CausalTables.replace(data; data = (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
 
-    truedr_model = DensityRatioPlugIn(Condensity.OracleDensityEstimator(dgp))
-    X = reject(data, :A, :A_s, :Y) |> Tables.columntable
-    y = TableOperations.select(data, :A) |> Tables.columntable
+    truedr_model = DensityRatioPlugIn(Condensity.OracleDensityEstimator(scm))
+    X = data |> TableTransforms.Reject(:A, :Y)
+    y = data |> TableTransforms.Select(:A)
     truedr_mach = machine(truedr_model, X, y) |> fit!
     true_ratio = predict(truedr_mach, Xy_nu, Xy_de)
 
@@ -132,12 +132,12 @@ end
 end
 
 @testset "Kernel" begin
-    Xy_nu = replacetable(data, TableOperations.select(data, :L1, :A) |> Tables.columntable)
-    Xy_de = replacetable(data, (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
+    Xy_nu = CausalTables.replace(data; data = data |> TableTransforms.Select(:L1, :A))
+    Xy_de = CausalTables.replace(data; data = (L1 = Tables.getcolumn(data, :L1), A = Tables.getcolumn(data, :A) .- 0.1))
 
-    truedr_model = DensityRatioPlugIn(Condensity.OracleDensityEstimator(dgp))
-    X = reject(data, :A, :A_s, :Y) |> Tables.columntable
-    y = TableOperations.select(data, :A) |> Tables.columntable
+    truedr_model = DensityRatioPlugIn(Condensity.OracleDensityEstimator(scm))
+    X = data |> TableTransforms.Reject(:A, :Y)
+    y = data |> TableTransforms.Select(:A)
     truedr_mach = machine(truedr_model, X, y) |> fit!
     true_ratio = predict(truedr_mach, Xy_de, Xy_nu)
 

@@ -10,7 +10,7 @@ import Distributions: convolve, pdf
 import StatsBase: mean
 using KernelDensity
 using Tables
-using TableOperations
+using TableTransforms
 using DataAPI
 using CausalTables
 using DensityRatioEstimation

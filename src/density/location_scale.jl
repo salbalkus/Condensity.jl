@@ -144,7 +144,7 @@ function MMI.predict(model::LocationScaleDensity, fitresult, Xy)
 
     # split off y
     y_cur = Tables.getcolumn(Xy, fitresult.targetname)
-    Xy_cur = reject(Xy, fitresult.targetname) |> Tables.columntable
+    Xy_cur = Xy |> TableTransforms.Reject(fitresult.targetname)
     # compute density
     density = predict_density(fitresult.location_mach, 
                                               fitresult.scale_mach, 

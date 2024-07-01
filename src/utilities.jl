@@ -29,21 +29,6 @@ The mean log-likelihood.
 meanloglik(y, ypred) = mean(log.(ypred))
 
 """
-    reject(data, symb...)
-
-Remove specified columns from a table.
-
-# Arguments
-- `data`: The input table.
-- `symb...`: Symbols representing the columns to be removed.
-
-# Returns
-A new table with the specified columns removed.
-
-"""
-reject(data, symb...) = TableOperations.select(data, setdiff(Tables.columnnames(data), symb)...)
-
-"""
     merge_tables(tables...)
 
 Merge multiple tables into a single table by column-wise concatenation.
