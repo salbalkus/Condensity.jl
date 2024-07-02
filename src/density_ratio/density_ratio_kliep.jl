@@ -6,8 +6,8 @@ end
 function MMI.fit(model::DensityRatioKLIEP, verbosity, Xy_de, Xy_nu)
 
     # Convert data into a vector of tuples for use by DensityRatioEstimation
-    x_nu = rowtable(Xy_nu)
-    x_de = rowtable(Xy_de)
+    x_nu = Tables.rowtable(Xy_nu)
+    x_de = Tables.rowtable(Xy_de)
 
     # Optimize hyperparameters for the KLIEP method
     dre = DensityRatioEstimation.fit(KLIEP, x_nu, x_de, LCV((σ=model.σ,b=model.b)))
