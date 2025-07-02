@@ -58,7 +58,7 @@ mutable struct DensityRatioPlugIn <: ConDensityRatioEstimatorAdaptive
     50-element Vector
     ```
     """
-    function DensityRatioPlugIn(density_estimator::ConDensityEstimator, truncate::Bool = false)
+    function DensityRatioPlugIn(density_estimator::ConDensityEstimator, truncate::Bool = true)
         new(density_estimator, truncate)
     end
 end
@@ -75,21 +75,17 @@ function MMI.predict(model::DensityRatioPlugIn, fitresult, Xy_nu, Xy_de)
 
     g_nu = MMI.predict(fitresult.density_mach, Xy_nu)
     g_de = MMI.predict(fitresult.density_mach, Xy_de)
-
-    # We need to keep (gn .> 0) for the shifted version of Hn
-    #b = maximum([1/length(gn), 0.0001])
-    #n = length(g_nu)
-
-    # TODO: Decide which n to use for bounding in the cross-validated setting
-    # Should we use full data, the train fold, or the test fold?
-    #b = 1 / (sqrt(model.n_bound) * log(model.n_bound)) # from Dudoit and vdL
     
     if model.truncate
         bound!(g_de; lower = 0.001)
+        bound!(g_nu; lower = 0.001)
     end
+
     Hn = g_nu ./ g_de
 
-    #Hn = (gδinvn ./ bound(gn, lower = b)) .* (gn .> 0) .+ (gδn .== 0)
-    #Hn = ifelse.(gn .> 0, gδinvn ./ gn, 0) .+ (gδn .== 0)
+    if model.truncate
+        Hn[Hn .> 40] .= 40
+    end
+
     return Hn
 end
