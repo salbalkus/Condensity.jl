@@ -81,7 +81,7 @@ function fit_density(model::LocationScaleDensity, verbosity, X, y)
     
     # Fit the location model
     location_mach = machine(model.location_model, X, y) |> fit!
-    μ = MMI.predict_mean(location_mach, X)
+    μ = MMI.predict(location_mach, X)
 
     # Fit the scale model
     ε = @. y - μ
@@ -90,7 +90,7 @@ function fit_density(model::LocationScaleDensity, verbosity, X, y)
     scale_mach = machine(model.scale_model, X, ε2) |> fit!
 
     # Fit the density model
-    σ2 = MMI.predict_mean(scale_mach, X)
+    σ2 = MMI.predict(scale_mach, X)
     σ2[σ2 .< 0] .= min_obs_ε2
     ε = @. ε / sqrt(σ2)
 
@@ -130,8 +130,8 @@ end
 function predict_density(location_mach, scale_mach, density_mach, min_obs_ε2, X, y)
 
     # Get residual model predictions
-    μ = MMI.predict_mean(location_mach, X)
-    σ2 = MMI.predict_mean(scale_mach, X)
+    μ = MMI.predict(location_mach, X)
+    σ2 = MMI.predict(scale_mach, X)
     σ2[σ2 .<= 0] .= min_obs_ε2
     rootσ2 = @. sqrt(σ2)
 
