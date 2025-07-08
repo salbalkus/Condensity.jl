@@ -105,7 +105,7 @@ function fit_density(model::LocationScaleDensity, verbosity, X, y)
         range = model.r_density
         )
     
-    density_mach = fit!(machine(tuned_density_model, (ε = ε,), zeros(length(ε))), verbosity = verbosity)
+    density_mach = fit!(machine(tuned_density_model, (ε = ε,), zeros(length(ε))), verbosity = -1)
 
     return location_mach, scale_mach, density_mach, min_obs_ε2
 end
