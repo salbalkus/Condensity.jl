@@ -80,7 +80,7 @@ end
 function fit_density(model::LocationScaleDensity, verbosity, X, y)
     
     # Fit the location model
-    location_mach = machine(model.location_model, X, y) |> fit!
+    location_mach = fit!(machine(model.location_model, X, y), verbosity = verbosity)
     μ = MMI.predict(location_mach, X)
 
     # Fit the scale model
@@ -105,7 +105,7 @@ function fit_density(model::LocationScaleDensity, verbosity, X, y)
         range = model.r_density
         )
     
-    density_mach = machine(tuned_density_model, (ε = ε,), zeros(length(ε))) |> fit!
+    density_mach = fit!(machine(tuned_density_model, (ε = ε,), zeros(length(ε))), verbosity = verbosity)
 
     return location_mach, scale_mach, density_mach, min_obs_ε2
 end
