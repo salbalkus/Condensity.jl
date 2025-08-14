@@ -9,7 +9,6 @@ using Tables
 using TableTransforms
 using DensityRatioEstimation
 using Optim
-using Graphs
 using Random
 
 Random.seed!(1);
@@ -136,5 +135,8 @@ end
     @test mean(@. (est_ratio - true_ratio)^2) < 0.05
     @test cor(est_ratio, true_ratio) > 0.75
 end
+
+# Other quality checkers
+include("Aqua.jl")
 
 

@@ -36,10 +36,7 @@ include("density/location_scale.jl")
 
 include("density_ratio/density_ratio_plugin.jl")
 include("density_ratio/probabilistic_classifier.jl")
-include("density_ratio/density_ratio_kliep.jl")
 include("density_ratio/density_ratio_kernel.jl")
-include("density_ratio/density_ratio_kmm.jl")
-
 
 ### Exports ###
 
@@ -63,16 +60,8 @@ export DensityRatioPlugIn
 # probabilistic_classifier.jl
 export DensityRatioClassifier
 
-# density_ratio_kliep.jl
-export DensityRatioKLIEP
-
 # density_ratio_kernel.jl
 export DensityRatioKernel
-
-# density_ratio_kmm.jl
-export DensityRatioKMM
-
-# golden_section_search.jl
 
 # general
 export fit
