@@ -26,9 +26,7 @@ Condensity.jl is designed to work with the [MLJ](https://alan-turing-institute.g
 3. Fit the model to the data using the `fit!` method.
 4. Make predictions using the `predict` method.
 
-The models defined in Condensity.jl are compatible with many (but not all) MLJ functionalities, including hyperparameter tuning, cross-validation, and model composition.
-
-Here's a simple example of how to fit a conditional density estimator using Condensity.jl:
+The models defined in Condensity.jl are compatible with many (but not all) MLJ functionalities, including hyperparameter tuning, cross-validation, and model composition. Here's a simple example of how to fit a conditional density estimator using Condensity.jl:
 
 ```jldoctest; output = false, filter = r"(?<=.{17}).*"s
 using Condensity
