@@ -39,7 +39,7 @@ StatsBase = "0.34"
 TableTransforms = "1"
 Tables = "0.1, 1"
 Test = "1"
-julia = "1"
+julia = "1.9"
 
 [extras]
 MLJLinearModels = "6ee0df7b-362f-4a72-a706-9e79364fb692"
