@@ -7,9 +7,9 @@ using MLJLinearModels
 using MLJModels
 using Tables
 using TableTransforms
+using Random
 using DensityRatioEstimation
 using Optim
-using Random
 
 Random.seed!(1);
 
@@ -72,9 +72,9 @@ end
     @test prediction isa Array{Float64,1}
     @test all(@. prediction >= 0 && prediction < 1)
 
-    # TODO: Need a better test to determine this actually works
     true_density = propensity(scm, dat, :A)
     @test mean((prediction .- true_density).^2) .< 0.005
+    @test cor(prediction, true_density) .> 0.5
 
     # Test within DensityRatioPlugIn
     Xy = responseparents(dat)
@@ -114,8 +114,8 @@ end
     true_mach = machine(true_model, X, y) |> fit!
     true_prediction_ratio = predict(true_mach, Xy_nu, Xy_de)
     # Test if predictions are close to truth
-    println("MSE: ", mean((prediction_ratio .- true_ratio).^2))
-    println("Cor: ", cor(prediction_ratio, true_ratio))
+    println("MSE: ", mean((prediction_ratio .- true_prediction_ratio).^2))
+    println("Cor: ", cor(prediction_ratio, true_prediction_ratio))
     @test mean((true_prediction_ratio .- prediction_ratio).^2) < 0.1
     @test cor(true_prediction_ratio, prediction_ratio) > 0.5
     
@@ -136,8 +136,8 @@ end
     est_ratio = predict(kernel_mach, Xy_nu, Xy_de)
 
     # Test if predictions are close to truth
-    println("MSE: ", mean((prediction_ratio .- true_ratio).^2))
-    println("Cor: ", cor(prediction_ratio, true_ratio))
+    println("MSE: ", mean((est_ratio .- true_ratio).^2))
+    println("Cor: ", cor(est_ratio, true_ratio))
     @test mean(@. (est_ratio - true_ratio)^2) < 0.1
     @test cor(est_ratio, true_ratio) > 0.5
 end

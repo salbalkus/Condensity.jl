@@ -1,5 +1,5 @@
 mutable struct DensityRatioKernel<: ConDensityRatioEstimatorFixed 
-    dre
+    dre::DensityRatioEstimation.DensityRatioEstimator
 end
 
 function MMI.fit(::DensityRatioKernel, verbosity, Xy_nu, Xy_de)
