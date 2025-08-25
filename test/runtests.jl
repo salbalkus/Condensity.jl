@@ -78,7 +78,7 @@ end
 
     # Test within DensityRatioPlugIn
     Xy = responseparents(dat)
-    Xy_shift = intervene(Xy, additive_mtp(-1.0))
+    Xy_shift = intervene(Xy, additive_mtp(-0.5))
     density_ratio_model = Condensity.DensityRatioPlugIn(lse_model)
     dr_mach = machine(density_ratio_model, X, y) |> fit!
     prediction_ratio = predict(dr_mach, Xy_shift, Xy)
@@ -89,14 +89,14 @@ end
     @test all(@. prediction_ratio > 0)
     println("MSE: ", mean((prediction_ratio .- true_ratio).^2))
     println("Cor: ", cor(prediction_ratio, true_ratio))
-    @test mean((prediction_ratio .- true_ratio).^2) .< 1.0
+    @test mean((prediction_ratio .- true_ratio).^2) .< 0.1
     @test cor(prediction_ratio, true_ratio) .> 0.5
 end
 
 @testset "DensityRatioClassifier" begin
 
     Xy_de = responseparents(dat)
-    Xy_nu = intervene(responseparents(dat), additive_mtp(-0.1))
+    Xy_nu = intervene(responseparents(dat), additive_mtp(-0.5))
 
     classifier_model = LogisticClassifier()
     drc_model = DensityRatioClassifier(classifier_model)
@@ -118,7 +118,6 @@ end
     println("Cor: ", cor(prediction_ratio, true_prediction_ratio))
     @test mean((true_prediction_ratio .- prediction_ratio).^2) < 0.1
     @test cor(true_prediction_ratio, prediction_ratio) > 0.5
-    
 end
 
 @testset "Kernel" begin
